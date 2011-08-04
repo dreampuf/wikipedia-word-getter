@@ -8,12 +8,16 @@ import time
 import Queue
 import threading
 import urllib2
+import cPickle as pickle
 import socket
 
 socket.setdefaulttimeout(10)
 
 from cStringIO import StringIO
 
+
+PROCESS_FILE = ".last"
+PROCESS_FILE = os.path.realpath(PROCESS_FILE)
 
 class Downloader(object):
     def __init__(self, t_num):
@@ -22,7 +26,7 @@ class Downloader(object):
         self._rq = Queue.Queue()
         self._tds = []
 
-    def d(self, tasks):
+    def d(self, tasks, category=None):
 
         class _woker(threading.Thread):
             def __init__(self, dl, tout=5, **kwds):
@@ -70,12 +74,43 @@ class Downloader(object):
 
         out = sys.stdout
         while True:
-            out.write("\r%s/%s - theading num: %s" % (self._rq.qsize(), rlen, len(self._tds)))
-            out.flush()
-            if rlen == self._rq.qsize():
-                break
-            else:
-                time.sleep(.5)
+            try:
+                out.write("\r%s/%s - theading num: %s" % (self._rq.qsize(), rlen, len(self._tds)))
+                out.flush()
+                if rlen == self._rq.qsize():
+                    break
+                else:
+                    time.sleep(.5)
+            except KeyboardInterrupt, ex:
+                #SAVE PROCESS
+                #TODO I confused of how to continue to saved process
+                if not os.path.exists(PROCESS_FILE):
+                    f = open(PROCESS_FILE, "wb")
+                    pickle.dump({}, f)
+                    f.close()
+                f = open(PROCESS_FILE, "rb")
+                try:
+                    origin = pickle.load(f)
+                except EOFError, ex: #may error format of file
+                    nf = open(PROCESS_FILE, "wb")
+                    pickle.dump({}, f)
+                    nf.close()
+                    f.close()
+                if category not in origin:
+                    origin[category] = {"taskqueue": [],
+                                        "retqueue": [],
+                                        "thmax": 10 }
+                
+                c = origin[category]
+                c["taskqueue"].extend([i for i in self._tq.queue if i not in c["taskqueue"]])
+                c["retqueue"].extend([i for i in self._rq.queue if i not in c["retqueue"]])
+                c["thmax"] = self._tnum
+                
+                f = open(PROCESS_FILE, "wb")
+                pickle.dump(origin, f)
+                f.close()
+                print "\nthe process has saved, start will be load at next time"
+                raise StopIteration("stop by user")
         out.write("\n")
 
         while not self._rq.empty():
@@ -94,14 +129,14 @@ def main(*arg):
             spells.append({"url": "%s%s" % (HOST, node.get("href")), "alias": node.text})
 
     letters = []
-    for i in dl.d(spells):
+    for i in dl.d(spells[:50]):
         et = etree.HTML(i[1])
         for node in et.xpath("//div[@id='bodyContent']/p/a"):
             title = node.get("title")
             if title and not title.startswith("Wiktionary"):
                 letters.append({"url": "%s%s" % (HOST, node.get("href")), "alias": node.text})
 
-    for i in dl.d(letters):
+    for i in dl.d(letters[:200]):
         et = etree.HTML(i[1])
         for node in et.xpath(u"//div[@id='bodyContent']/h3/span[text()='组词']"):
             n = node.getparent().getnext()
