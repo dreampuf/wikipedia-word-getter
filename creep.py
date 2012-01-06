@@ -12,6 +12,7 @@ socket.setdefaulttimeout(10)
 from contextlib import closing
 from httplib import HTTP, HTTPConnection
 from lxml import etree
+from pprint import pprint 
 
 
 class Factory(object):
@@ -38,25 +39,35 @@ class OpenNode(Queue):
         Queue.put(self, obj)
 
     def analysis(self):
-        #fetch the URL, GROUP NUMBER : #1: scheme #2: auth name #3: auth password #4: domain, #5: port, #6: path, #7: I DO NOT KWON, #8: GET arg, #9 anchor
-        major = re.compile("(?:(\w+)://)?(?:(\w+)(?::(\w+))?@)?([^/;\?:#]+)(?::(\d+))?(?:/?([^;\?#]+))?(?:;([^\?#]+))?(?:\?([^#]+))?(?:#(\w+))?")
-        cluster = {(2, "*"): [(url, major.match(url).groups()) for url in URLS]}
-        exche = 1
-        while exche:
-            exche = 0
+        urls = [(url, major.match(url).groups()) for url in URLS]
+        domains = list(set((v[3] for k, v in urls)))
+        glass = [(d, [item for item in urls if item[1][3] == d]) for d in domains]
+        #cluster = {(2, "*"): [(url, major.match(url).groups()) for url in URLS]}
+
+        cluster = []
+        for k, v in glass:
+            exche = 1
+            while exche:
+                exche = 0
+                
+                #for i in v[0]
+
+class URL(object):
+    #fetch the URL, GROUP NUMBER : #1: scheme #2: auth name #3: auth password #4: domain, #5: port, #6: path, #7: I DO NOT KWON, #8: GET arg, #9 anchor
+    MARJOR = re.compile("(?:(\w+)://)?(?:(\w+)(?::(\w+))?@)?([^/;\?:#]+)(?::(\d+))?(?:/?([^;\?#]+))?(?:;([^\?#]+))?(?:\?([^#]+))?(?:#(\w+))?")
+    def __init__(self, url):
+        self.url = url
+        self.struct = st = URL.MARJOR.match(url).groups()
+        if st[5]:
+            #TODO
+            pass
+        
+    def assembly(self):
+        pass
+
+                
             
         
-        #for url in URLS:
-        #    for i in major.finditer(url):
-        #        if not i.group(8):
-        #            continue
-        #        #Path
-        #        
-        #        paths = i.group(6)
-        #        
-        #        
-        #        print i.groups()
-
 URLS = ['http://www.sina.com.cn',
  'http://tech.sina.com.cn/focus/sinahelp.shtml',
  'http://sina.allyes.com/main/adfclick?db=sina&bid=344807,404080,409394&cid=0,0,0&sid=406736&advid=13662&camid=65569&show=ignore&url=http://ent.sina.com.cn/v/m/2011-12-27/11103518258.shtml',
