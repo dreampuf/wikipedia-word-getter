@@ -39,6 +39,8 @@ class OpenNode(Queue):
         Queue.put(self, obj)
 
     def analysis(self):
+        [URL(i) for i in URLS]
+        return 
         urls = [(url, major.match(url).groups()) for url in URLS]
         domains = list(set((v[3] for k, v in urls)))
         glass = [(d, [item for item in urls if item[1][3] == d]) for d in domains]
@@ -52,20 +54,56 @@ class OpenNode(Queue):
                 
                 #for i in v[0]
 
+class URLCollection(object):
+    def __init__(self, ls=None):
+        if ls:
+            self.urls = [URL(i) for i in ls]
+        else:
+            self.urls = []
+
+    def similar(self):
+        pass
+
 class URL(object):
     #fetch the URL, GROUP NUMBER : #1: scheme #2: auth name #3: auth password #4: domain, #5: port, #6: path, #7: I DO NOT KWON, #8: GET arg, #9 anchor
     MARJOR = re.compile("(?:(\w+)://)?(?:(\w+)(?::(\w+))?@)?([^/;\?:#]+)(?::(\d+))?(?:/?([^;\?#]+))?(?:;([^\?#]+))?(?:\?([^#]+))?(?:#(\w+))?")
-    def __init__(self, url):
+    GETARG = re.compile("(?:&?([^=#]+)=?([^&#]+)?)")
+    def __init__(self, url, change_step=0):
+        #定义两种结构,分别用于产生变体以及合成URL
         self.url = url
-        self.struct = st = URL.MARJOR.match(url).groups()
-        if st[5]:
-            #TODO
-            pass
-        
-    def assembly(self):
+        self.struct = st = list(URL.MARJOR.match(url).groups())
+        self.struct_exp = st_exp = st[:]
+        arglen = len([i for i in (st[1], st[3], st[5], st[7]) if i])
+        if st[5] and "/" in st[5]: #Split PATH
+            st_exp[5:6] = st[5] = st[5].split("/")
+            arglen = arglen + len(st[5]) - 1
+        if st[7]:
+            get_args = [i.groups() for i in URL.GETARG.finditer(st[7])]
+            if get_args:
+                cur_exp_pos = 7 + len(st[5]) - 1
+                st_exp[cur_exp_pos:cur_exp_pos+1] = st[7] = get_args
+                arglen = arglen + len(get_args) - 1
+        self.arglen = arglen
+        self.change_step = change_step
+    
+    def assembly(self, replace_pos=-1, replace_val=None):
+        st = self.st_exp[:]
+        if replace_pos > -1 and replace_val is not None:
+            st[replace_pos] = replace_val
+
+        return "%s%s%s%s%s"
+
+    def diff(self, other):
+        #other : URL
         pass
 
-                
+    def change(self):
+        cs = self.change_step
+        alen = self.arglen
+        if cs >= self.arglen:
+            raise StopIteration("No Change State")
+        cur_val = self.struct_exp[alen-cs]
+        if cur_val.isalpha():
             
         
 URLS = ['http://www.sina.com.cn',
